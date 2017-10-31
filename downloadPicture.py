@@ -9,6 +9,7 @@ import urllib.request
 import random
 from  http.cookiejar import CookieJar
 import os
+import re
 
 
 def url_open(url):
@@ -34,55 +35,42 @@ def url_open(url):
 
 def get_page(url):
     html = url_open(url).decode('utf-8')
-
-    a = html.find('current-comment-page') + 23
-    b = html.find(']',a)
-    #print(html[a:b])
-
-    return html[a:b]
+    p=re.compile(r'<span class="current-comment-page">\[(\d+)\]</span>')
+    page_num=re.findall(p,html)
+    #print(page_num[0])
+    #<span class="current-comment-page">[231]</span>
+    return page_num[0]
 
 
 def find_imgs(url):
     html=url_open(url).decode('utf-8')
-    img_addrs = []
+    p = r'<img src="(//(?:[^"]+)\.jpg)"'
+    imglist = re.findall(p, html)
+    # for each in imglist:
+    #     print('http:'+each)
 
-    a = html.find('img src=')
+    for each in imglist:
+        filename = each.split("/")[-1]
+        urllib.request.urlretrieve('http:'+each, filename, None)
 
-    while a!=-1:
-        b=html.find('.jpg', a, a+255)
-        if b!=-1:
-            img_addrs.append(html[a+9:b+4])
-        else:
-            b= a+9
 
-        a=html.find('img src=',b)
-
-    # for each in img_addrs:
-    #     print(each)
-    return img_addrs
-
-def save_imgs(folder, img_addrs):
-    for each in img_addrs:
-        filename=each.split('/')[-1]
-        with open(filename, 'wb') as f:
-            img=url_open('http:'+each)
-            f.write(img)
-def download_mm( folder, pages=10 ):
-    os.mkdir(folder)
+def download_mm( folder, pages=3 ):
+    if not os.path.exists(folder):
+        os.system('mkdir %s'%folder)
     os.chdir(folder)
-
     url="http://jandan.net/ooxx/"
+    get_page(url)
+
     page_num=int(get_page(url))
-    #print('hello world')
 
     for i in range(pages):
         page_num -= i
         page_url=url+'page-'+ str(page_num)+ '#comments'
-        img_addrs=find_imgs(page_url)
-        save_imgs(folder,img_addrs)
+        find_imgs(page_url)
+
 if __name__=='__main__':
 
-    download_mm('picture2',10)
+    download_mm('picture',10)
 
 
 
